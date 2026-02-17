@@ -1,0 +1,22 @@
+{
+  "name": "tldhunt",
+  "version": "1.0.0",
+  "description": "Domain availability checker across multiple TLD extensions",
+  "module": "src/index.ts",
+  "main": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "boune": "^0.10.2"
+  }
+}

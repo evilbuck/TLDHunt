@@ -343,7 +343,6 @@
 .drive
 .dtv
 .dubai
-.dunlop
 .dupont
 .durban
 .dvag
@@ -486,7 +485,6 @@
 .gold
 .goldpoint
 .golf
-.goo
 .goodyear
 .goog
 .google
@@ -944,7 +942,6 @@
 .realty
 .recipes
 .red
-.redstone
 .redumbrella
 .rehab
 .reise
@@ -1251,7 +1248,6 @@
 .wine
 .winners
 .wme
-.wolterskluwer
 .woodside
 .work
 .works
