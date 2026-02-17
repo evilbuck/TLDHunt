@@ -6,8 +6,11 @@ export interface ParsedArgs {
   tldFile?: string;
   availableOnly: boolean;
   updateTld: boolean;
+  jsonOutput: boolean;
   fileExists?: (path: string) => boolean;
 }
+
+export const DEFAULT_TLDS = [".com", ".net", ".io", ".ai"];
 
 export function parseArgs(argv: string[]): ParsedArgs {
   const args: ParsedArgs = {
@@ -15,11 +18,18 @@ export function parseArgs(argv: string[]): ParsedArgs {
     tlds: [],
     availableOnly: false,
     updateTld: false,
+    jsonOutput: false,
   };
   
   let i = 0;
   while (i < argv.length) {
     const arg = argv[i];
+    
+    if (!arg.startsWith("-") && args.keywords.length === 0) {
+      args.keywords.push(arg);
+      i++;
+      continue;
+    }
     
     switch (arg) {
       case "-k":
@@ -47,6 +57,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
             tld = "." + tld;
           }
           args.tlds.push(tld);
+          args.tldFile = undefined;
           i++;
         }
         break;
@@ -64,6 +75,11 @@ export function parseArgs(argv: string[]): ParsedArgs {
         args.availableOnly = true;
         break;
         
+      case "-j":
+      case "--json":
+        args.jsonOutput = true;
+        break;
+        
       case "--update-tld":
         args.updateTld = true;
         break;
@@ -79,7 +95,7 @@ export function validateArgs(args: ParsedArgs): ValidationResult {
   const tlds = args.tlds ?? [];
   
   if (args.updateTld) {
-    if (args.keywords.length > 0 || tlds.length > 0 || args.tldFile || args.availableOnly) {
+    if (args.keywords.length > 0 || tlds.length > 0 || args.availableOnly) {
       return { valid: false, error: "--update-tld cannot be used with other flags." };
     }
     return { valid: true };
@@ -91,10 +107,6 @@ export function validateArgs(args: ParsedArgs): ValidationResult {
   
   if (tlds.length > 0 && args.tldFile) {
     return { valid: false, error: "You can only specify one of -e or -E options." };
-  }
-  
-  if (tlds.length === 0 && !args.tldFile) {
-    return { valid: false, error: "Either -e or -E option is required." };
   }
   
   if (args.tldFile) {

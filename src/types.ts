@@ -4,6 +4,11 @@ export interface DomainResult {
   available: boolean;
 }
 
+export interface JsonOutput {
+  domain: string;
+  available: boolean;
+}
+
 export interface CheckOptions {
   keywords: string[];
   tlds: string[];

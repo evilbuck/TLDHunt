@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 import { displayBanner } from "./banner";
-import { parseArgs, validateArgs, type ParsedArgs } from "./cli";
+import { parseArgs, validateArgs, DEFAULT_TLDS, type ParsedArgs } from "./cli";
 import { checkDomain } from "./domain-checker";
 import { updateTldList } from "./tld-updater";
 import { formatResultsTable, countResults } from "./table-formatter";
-import type { DomainResult } from "./types";
+import type { DomainResult, JsonOutput } from "./types";
 
 const MAX_CONCURRENT = 30;
 
@@ -63,7 +63,9 @@ export async function runWithConcurrencyLimit<T>(
 export async function main(argv: string[]): Promise<number> {
   const args = parseArgs(argv);
   
-  displayBanner();
+  if (!args.jsonOutput) {
+    displayBanner();
+  }
   
   if (args.updateTld) {
     console.log("Fetching TLD data from IANA...");
@@ -75,18 +77,24 @@ export async function main(argv: string[]): Promise<number> {
   const validation = validateArgs(args);
   if (!validation.valid) {
     console.error(validation.error);
-    usage();
+    if (!args.jsonOutput) {
+      usage();
+    }
     return 1;
   }
   
   let tlds: string[];
   if (args.tldFile) {
     tlds = await loadTldsFromFile(args.tldFile);
-  } else {
+  } else if (args.tlds.length > 0) {
     tlds = args.tlds;
+  } else {
+    tlds = DEFAULT_TLDS;
   }
   
-  console.log(`Checking ${args.keywords.length} keyword(s) against ${tlds.length} TLD(s)...\n`);
+  if (!args.jsonOutput) {
+    console.log(`Checking ${args.keywords.length} keyword(s) against ${tlds.length} TLD(s)...\n`);
+  }
   
   const tasks: (() => Promise<DomainResult>)[] = [];
   
@@ -99,27 +107,40 @@ export async function main(argv: string[]): Promise<number> {
   
   const results = await runWithConcurrencyLimit(tasks, MAX_CONCURRENT);
   
-  let finalResults = results;
-  if (args.availableOnly) {
-    finalResults = results.filter(r => r.available);
-  }
-  
-  if (finalResults.length === 0) {
-    console.log("No available domains found.");
+  if (args.jsonOutput) {
+    let jsonResults: JsonOutput[] = results.map(r => ({
+      domain: `${r.keyword}${r.tld}`,
+      available: r.available,
+    }));
+    if (args.availableOnly) {
+      jsonResults = jsonResults.filter(r => r.available);
+    }
+    console.log(JSON.stringify(jsonResults));
   } else {
-    console.log(formatResultsTable(finalResults));
-    console.log();
+    let finalResults = results;
+    if (args.availableOnly) {
+      finalResults = results.filter(r => r.available);
+    }
     
-    const counts = countResults(results);
-    console.log(`Summary: ${counts.available} available, ${counts.taken} taken`);
+    if (finalResults.length === 0) {
+      console.log("No available domains found.");
+    } else {
+      console.log(formatResultsTable(finalResults));
+      console.log();
+      
+      const counts = countResults(results);
+      console.log(`Summary: ${counts.available} available, ${counts.taken} taken`);
+    }
   }
   
   return 0;
 }
 
 function usage(): void {
-  console.log(`Usage: tldhunt -k <keyword> [-e <tld> | -E <tld-file>] [-x] [--update-tld]
-Example: tldhunt -k linuxsec -E tlds.txt
+  console.log(`Usage: tldhunt <keyword> [-e <tld> | -E <tld-file>] [-x] [-j] [--update-tld]
+Example: tldhunt linuxsec
+       : tldhunt linuxsec -e .com
+       : tldhunt linuxsec -j
        : tldhunt --update-tld`);
 }
 

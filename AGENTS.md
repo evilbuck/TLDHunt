@@ -2,204 +2,143 @@
 
 ## Project Overview
 
-TLDHunt is a Bash-based command-line tool for checking domain name availability across multiple TLD extensions. It uses `whois` queries to detect if domains are registered.
+TLDHunt is a TypeScript command-line tool for checking domain name availability across multiple TLD extensions. It uses `whois` queries to detect if domains are registered.
 
-**Tech Stack**: Pure Bash (no build system, no tests)
-**Dependencies**: `whois`, `curl`
+**Tech Stack**: TypeScript with Bun runtime
+**Dependencies**: `whois` (system package), Bun runtime
 
 ---
 
 ## Commands
 
-This is a standalone Bash script with no build/test/lint infrastructure.
-
 ### Running the Tool
 
 ```bash
 # Basic usage
-./tldhunt.sh -k <keyword> -E <tld-file>
+bun run src/index.ts -k <keyword> -E <tld-file>
 
 # Check domain with TLD list
-./tldhunt.sh -k linuxsec -E tlds.txt
+bun run src/index.ts -k linuxsec -E tlds.txt
 
 # Check single TLD
-./tldhunt.sh -k linuxsec -e .com
+bun run src/index.ts -k linuxsec -e .com
+
+# Check multiple keywords
+bun run src/index.ts -K "myproject,startup" -e .com -e .io
 
 # Show only available domains
-./tldhunt.sh -k linuxsec -E tlds.txt --not-registered
+bun run src/index.ts -k linuxsec -E tlds.txt -x
 
 # Update TLD list from IANA
-./tldhunt.sh --update-tld
+bun run src/index.ts --update-tld
 ```
 
-### Linting
+### Development
 
 ```bash
-# Optional: Check for shell script issues
-shellcheck tldhunt.sh
+# Install dependencies
+bun install
+
+# Run tests
+bun test
+
+# Run specific test file
+bun test test/domain-checker.test.ts
+
+# Run with watch mode
+bun test --watch
 ```
 
 ---
 
 ## Code Style Guidelines
 
-### Shebang & Encoding
+### TypeScript Configuration
 
-- Always use `#!/bin/bash` as shebang
-- No encoding declaration needed for pure Bash
+- Target: ESNext
+- Module: Preserve (Bun handles bundling)
+- Strict mode enabled
+- Use `verbatimModuleSyntax` for explicit type imports
+
+### Imports
+
+```typescript
+// Use type-only imports for types
+import type { DomainResult } from "./types";
+
+// Regular imports for values
+import { checkDomain } from "./domain-checker";
+```
 
 ### Variable Declarations
 
-```bash
-# Color/style variables: use default assignment syntax at top of file
-: "${blue:=\033[0;34m}"
-: "${green:=\033[0;32m}"
+```typescript
+// Use const for immutable values
+const tlds: string[] = [];
 
-# Regular variables: assign without spaces around equals
-variable="value"
+// Use let only when reassignment needed
+let count = 0;
 
-# Boolean flags: use true/false strings
-flag=false
-
-# Arrays: initialize empty, then populate
-tlds=()
-readarray -t tlds < "$file"
-```
-
-### Conditionals
-
-```bash
-# ALWAYS use [[ ]] for tests (bash-specific, safer than [ ])
-[[ -z $variable ]] && { echo "Error"; exit 1; }
-[[ -n $variable ]] && do_something
-
-# String comparisons
-[[ "$var" = "value" ]]
-
-# Numeric comparisons
-(( count >= 30 ))
-
-# File tests
-[[ -f $file ]]
-[[ -d $dir ]]
+// Boolean flags
+const availableOnly = false;
 ```
 
 ### Functions
 
-```bash
-# Use function_name() syntax
-check_domain() {
-    local domain="$1"
-    local result=""
-
-    # Function body
+```typescript
+// Export functions with explicit return types
+export function checkDomain(domain: string): Promise<DomainResult> {
+  // ...
 }
 
-# Call functions with arguments
-check_domain "$domain"
+// Use arrow functions for callbacks
+const results = await Promise.all(domains.map(d => checkDomain(d)));
 ```
 
-### Local Variables
+### Async/Await
 
-```bash
-# ALWAYS declare local variables inside functions
-local var="value"
-local output
-output=$(command)
-```
+```typescript
+// Prefer async/await over .then()
+const output = await executeWhois(domain);
 
-### Command Substitution
-
-```bash
-# Use $() syntax, NOT backticks
-result=$(whois "$domain" 2>/dev/null)
+// Handle errors with try/catch
+try {
+  const result = await checkDomain(domain);
+} catch {
+  // Handle gracefully
+}
 ```
 
 ### Error Handling
 
-```bash
-# Check command availability before use
-command -v whois &> /dev/null || { echo "whois not installed" >&2; exit 1; }
+```typescript
+// Throw descriptive errors
+if (!response.ok) {
+  throw new Error(`Failed to fetch: ${response.statusText}`);
+}
 
-# Redirect stderr to /dev/null for expected failures
-output=$(whois "$domain" 2>/dev/null)
+// Console.error for user-facing errors
+console.error("TLD file not found");
 
-# Error messages to stderr
-echo "Error message" >&2
-
-# Exit with non-zero on errors
-exit 1
-```
-
-### Argument Parsing
-
-```bash
-# Use while loop with case statement
-while [[ "$#" -gt 0 ]]; do
-    case $1 in
-        -k|--keyword) keyword="$2"; shift ;;
-        -e|--tld) tld="$2"; shift ;;
-        -x|--flag) flag=true ;;
-        --option) action=true ;;
-        *) echo "Unknown parameter: $1"; usage ;;
-    esac
-    shift
-done
-```
-
-### Output & Colors
-
-```bash
-# Use echo -e for colored output
-echo -e "[${b_green}avail${reset}] $domain"
-
-# Color definitions (use these variable names):
-# ${red}, ${green}, ${blue}, ${cyan}, ${orange}
-# ${b_red}, ${b_green} (bold variants)
-# ${reset} (reset formatting)
-# ${bold}
-```
-
-### Parallel Execution
-
-```bash
-# Run in background with &
-check_domain "$domain" &
-
-# Limit parallel jobs
-if (( $(jobs -r -p | wc -l) >= 30 )); then
-    wait -n
-fi
-
-# Wait for all background jobs
-wait
+// Exit with non-zero code
+process.exit(1);
 ```
 
 ### Naming Conventions
 
 | Type | Convention | Example |
 |------|------------|---------|
-| Variables | lowercase, underscores | `tld_file`, `whois_output` |
-| Constants/config | lowercase | `tld_url` |
-| Functions | lowercase, underscores | `check_domain`, `usage` |
-| Boolean flags | lowercase | `nreg`, `update_tld` |
-| Arrays | lowercase, plural | `tlds` |
+| Variables | camelCase | `tldFile`, `whoisOutput` |
+| Constants | SCREAMING_SNAKE_CASE | `TLD_URL`, `MAX_CONCURRENT` |
+| Functions | camelCase | `checkDomain`, `parseArgs` |
+| Interfaces | PascalCase | `DomainResult`, `ParsedArgs` |
+| Files | kebab-case | `domain-checker.ts` |
 
 ### Comments
 
-- No header comments needed (project is simple)
-- Add inline comments for non-obvious logic only
-- Comment regex patterns or complex pipelines
-
-### Pipelines
-
-```bash
-# Chain commands for text processing
-curl -s "$url" | \
-    grep -v '^#' | \
-    tr '[:upper:]' '[:lower:]' | \
-    sed 's/^/./' > "$output_file"
-```
+- No header comments needed
+- Add JSDoc for public APIs
+- Comment complex logic or gotchas
 
 ---
 
@@ -207,11 +146,24 @@ curl -s "$url" | \
 
 ```
 TLDHunt/
-├── tldhunt.sh      # Main script (entry point)
-├── tlds.txt        # Default TLD list from IANA
-├── top-12.txt      # Example: top 12 TLDs
-├── README.md       # Documentation
-└── AGENTS.md       # This file
+├── src/
+│   ├── index.ts          # Entry point, orchestrates workflow
+│   ├── cli.ts            # Argument parsing and validation
+│   ├── domain-checker.ts # WHOIS queries and registration detection
+│   ├── tld-updater.ts    # IANA TLD list fetching
+│   ├── table-formatter.ts# Result table output
+│   ├── banner.ts         # ASCII banner display
+│   └── types.ts          # Shared TypeScript interfaces
+├── test/
+│   ├── cli.test.ts
+│   ├── domain-checker.test.ts
+│   ├── tld-updater.test.ts
+│   ├── table-formatter.test.ts
+│   └── integration.test.ts
+├── tlds.txt              # Default TLD list from IANA
+├── package.json
+├── tsconfig.json
+└── README.md
 ```
 
 ---
@@ -226,9 +178,23 @@ Domains are considered **registered** if whois output contains:
 - `nameservers`
 - `status: active`
 
+Detection is case-insensitive.
+
 ### Parallelism
 
 The script runs up to 30 concurrent whois queries to balance speed vs. rate limiting.
+
+### Dependency Injection
+
+Core functions accept optional parameters for testability:
+
+```typescript
+// checkDomain accepts a custom whois executor
+await checkDomain("example.com", mockWhoisExecutor);
+
+// updateTldList accepts custom fetcher/writer
+await updateTldList(mockFetcher, mockWriter, "test.txt");
+```
 
 ### TLD File Format
 
@@ -244,15 +210,43 @@ One TLD per line, with leading dot.
 
 ## Testing
 
-No automated tests exist. Manual testing:
+Tests use Bun's built-in test runner:
 
 ```bash
-# Test basic functionality
-./tldhunt.sh -k testdomain -E top-12.txt
-
-# Test update feature
-./tldhunt.sh --update-tld
-
-# Test with shellcheck
-shellcheck tldhunt.sh
+bun test
 ```
+
+### Test Patterns
+
+```typescript
+import { describe, test, expect, mock } from "bun:test";
+
+describe("checkDomain", () => {
+  test("detects registered domain", async () => {
+    const mockOutput = "Name Server: ns1.example.com";
+    const result = await checkDomain("example.com", () => Promise.resolve(mockOutput));
+    
+    expect(result.available).toBe(false);
+  });
+});
+```
+
+### Mocking
+
+```typescript
+// Mock functions with mock()
+const mockFetcher = mock(() => Promise.resolve("com\norg"));
+
+// Restore mocks after tests
+beforeEach(() => mock.restore());
+afterEach(() => mock.restore());
+```
+
+---
+
+## Architecture
+
+See `.context/ARCHITECTURE.md` for detailed architecture documentation including:
+- Module responsibilities
+- Data flow diagram
+- Key design decisions

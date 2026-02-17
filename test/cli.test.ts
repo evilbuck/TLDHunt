@@ -2,6 +2,12 @@ import { describe, test, expect } from "bun:test";
 import { parseArgs, validateArgs, type ParsedArgs } from "../src/cli";
 
 describe("parseArgs", () => {
+  test("parses positional keyword", () => {
+    const result = parseArgs(["linuxsec"]);
+    
+    expect(result.keywords).toEqual(["linuxsec"]);
+  });
+
   test("parses single keyword with -k", () => {
     const result = parseArgs(["-k", "linuxsec"]);
     
@@ -80,7 +86,19 @@ describe("parseArgs", () => {
     expect(result.availableOnly).toBe(true);
   });
 
-  test("returns empty arrays for missing optional args", () => {
+  test("parses json output flag with -j", () => {
+    const result = parseArgs(["-j"]);
+    
+    expect(result.jsonOutput).toBe(true);
+  });
+
+  test("parses json output flag with --json", () => {
+    const result = parseArgs(["--json"]);
+    
+    expect(result.jsonOutput).toBe(true);
+  });
+
+  test("returns defaults for empty args", () => {
     const result = parseArgs([]);
     
     expect(result.keywords).toEqual([]);
@@ -127,7 +145,7 @@ describe("validateArgs", () => {
     expect(result.error).toBe("You can only specify one of -e or -E options.");
   });
 
-  test("errors when neither -e nor -E specified", () => {
+  test("validates keyword with no TLDs (uses defaults)", () => {
     const args: ParsedArgs = {
       keywords: ["linuxsec"],
       tlds: [],
@@ -137,8 +155,7 @@ describe("validateArgs", () => {
     
     const result = validateArgs(args);
     
-    expect(result.valid).toBe(false);
-    expect(result.error).toBe("Either -e or -E option is required.");
+    expect(result.valid).toBe(true);
   });
 
   test("errors when TLD file not found", () => {

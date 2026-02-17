@@ -5,7 +5,7 @@ TLDHunt is a command-line tool designed to help users find available domain name
 For red teaming or phishing purposes, this tool can help you to find similar domains with different extensions from the original domain.
 
 > [!NOTE]  
-> Tested on: **Linux** with **whois v5.5.15** and **Bun v1.3.9**
+> Tested on: **Arch Linux, BTW** with **whois v5.5.15** and **Bun v1.3.9**
 
 # Dependencies
 
@@ -45,44 +45,46 @@ You can also use a custom TLD list, but ensure it is formatted like this:
 # How to Use
 
 ```
-➜  TLDHunt bun run src/index.ts
+➜  TLDHunt bun run check linuxsec
  _____ _    ___  _  _          _   
 |_   _| |  |   \| || |_  _ _ _| |_ 
   | | | |__| |) | __ | || | ' \  _|
   |_| |____|___/|_||_|\_,_|_||_\__|
         Domain Availability Checker
 
-Keyword is required.
-Usage: tldhunt -k <keyword> [-e <tld> | -E <tld-file>] [-x] [--update-tld]
-Example: tldhunt -k linuxsec -E tlds.txt
-       : tldhunt --update-tld
+Checking 1 keyword(s) against 1500 TLD(s)...
 ```
 
 ## Examples
 
-### Update TLD list from IANA
+### Check a keyword (uses default TLDs: .com, .net, .io, .ai)
 ```bash
-bun run src/index.ts --update-tld
-```
-
-### Check single keyword against multiple TLDs
-```bash
-bun run src/index.ts -k linuxsec -E tlds.txt
+bun run check linuxsec
 ```
 
 ### Check multiple keywords against specific TLDs
 ```bash
-bun run src/index.ts -K "myproject,startup,devops" -e .com -e .io -e .ai
+bun run check -K "myproject,startup,devops" -e .com -e .io -e .ai
 ```
 
-### Check single keyword against a single TLD
+### Check a keyword against a single TLD
 ```bash
-bun run src/index.ts -k linuxsec -e .com
+bun run check linuxsec -e .com
 ```
 
 ### Show only available domains
 ```bash
-bun run src/index.ts -k linuxsec -E tlds.txt -x
+bun run check linuxsec -x
+```
+
+### Output as JSON (for scripts/agents)
+```bash
+bun run check linuxsec -j
+```
+
+### Update TLD list from IANA
+```bash
+bun run check --update-tld
 ```
 
 # Output Format
@@ -107,11 +109,13 @@ Summary: 2 available, 4 taken
 
 | Option | Description |
 |--------|-------------|
+| `<keyword>` | Keyword to check (positional, optional with `-k`) |
 | `-k, --keyword <keyword>` | Single keyword to check |
 | `-K, --keywords <keywords>` | Multiple keywords (comma-separated) |
-| `-e, --tld <tld>` | Single TLD to check |
+| `-e, --tld <tld>` | Single TLD to check (default: .com, .net, .io, .ai) |
 | `-E, --tld-file <file>` | File containing TLDs to check |
 | `-x, --available-only` | Show only available domains |
+| `-j, --json` | Output results as compact JSON |
 | `--update-tld` | Update TLD list from IANA |
 
 # Development
@@ -128,7 +132,7 @@ bun test
 
 ## Run CLI
 ```bash
-bun run src/index.ts -k test -e .com
+bun run check test -e .com
 ```
 
 # Legacy Shell Script
