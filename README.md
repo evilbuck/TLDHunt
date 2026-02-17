@@ -4,6 +4,9 @@ TLDHunt is a command-line tool designed to help users find available domain name
 
 For red teaming or phishing purposes, this tool can help you to find similar domains with different extensions from the original domain.
 
+> [!NOTE]
+> **For AI Agents**: If you're an AI agent looking to use TLDHunt as a tool, see [`.context/AGENT_TOOL.md`](.context/AGENT_TOOL.md) for usage instructions, JSON output schema, and integration patterns.
+
 > [!NOTE]  
 > Tested on: **Arch Linux, BTW** with **whois v5.5.15** and **Bun v1.3.9**
 
@@ -13,7 +16,14 @@ This tool requires the following dependencies:
 - **Bun**: JavaScript/TypeScript runtime (https://bun.sh)
 - **whois**: Used to check domain availability
 
-Install whois on Debian-based systems:
+Install whois:
+
+**Arch-based systems:**
+```bash
+sudo pacman -S whois
+```
+
+**Debian-based systems:**
 ```bash
 sudo apt install whois -y
 ```
