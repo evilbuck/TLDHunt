@@ -1,4 +1,4 @@
-import type { ParsedArgs, ValidationResult } from "./types";
+import type { ValidationResult } from "./types";
 
 export interface ParsedArgs {
   keywords: string[];
@@ -8,6 +8,9 @@ export interface ParsedArgs {
   updateTld: boolean;
   jsonOutput: boolean;
   fileExists?: (path: string) => boolean;
+  noCache: boolean;
+  clearCache: boolean;
+  cacheTtl: number;
 }
 
 export const DEFAULT_TLDS = [".com", ".net", ".io", ".ai"];
@@ -19,11 +22,19 @@ export function parseArgs(argv: string[]): ParsedArgs {
     availableOnly: false,
     updateTld: false,
     jsonOutput: false,
+    noCache: false,
+    clearCache: false,
+    cacheTtl: 1440,
   };
   
   let i = 0;
   while (i < argv.length) {
     const arg = argv[i];
+    
+    if (!arg) {
+      i++;
+      continue;
+    }
     
     if (!arg.startsWith("-") && args.keywords.length === 0) {
       args.keywords.push(arg);
@@ -35,7 +46,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
       case "-k":
       case "--keyword":
         if (argv[i + 1]) {
-          args.keywords.push(argv[i + 1]);
+          args.keywords.push(argv[i + 1] as string);
           i++;
         }
         break;
@@ -43,7 +54,8 @@ export function parseArgs(argv: string[]): ParsedArgs {
       case "-K":
       case "--keywords":
         if (argv[i + 1]) {
-          const keywords = argv[i + 1].split(",").map(k => k.trim());
+          const kw = argv[i + 1] as string;
+          const keywords = kw.split(",").map(k => k.trim());
           args.keywords.push(...keywords);
           i++;
         }
@@ -52,7 +64,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
       case "-e":
       case "--tld":
         if (argv[i + 1]) {
-          let tld = argv[i + 1].trim();
+          let tld = (argv[i + 1] as string).trim();
           if (!tld.startsWith(".")) {
             tld = "." + tld;
           }
@@ -65,7 +77,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
       case "-E":
       case "--tld-file":
         if (argv[i + 1]) {
-          args.tldFile = argv[i + 1];
+          args.tldFile = argv[i + 1] as string;
           i++;
         }
         break;
@@ -83,6 +95,24 @@ export function parseArgs(argv: string[]): ParsedArgs {
       case "--update-tld":
         args.updateTld = true;
         break;
+        
+      case "--no-cache":
+        args.noCache = true;
+        break;
+        
+      case "--clear-cache":
+        args.clearCache = true;
+        break;
+        
+      case "--cache-ttl":
+        if (argv[i + 1]) {
+          const ttl = parseInt(argv[i + 1] as string, 10);
+          if (!isNaN(ttl) && ttl > 0) {
+            args.cacheTtl = ttl;
+          }
+          i++;
+        }
+        break;
     }
     
     i++;
@@ -93,6 +123,13 @@ export function parseArgs(argv: string[]): ParsedArgs {
 
 export function validateArgs(args: ParsedArgs): ValidationResult {
   const tlds = args.tlds ?? [];
+  
+  if (args.clearCache) {
+    if (args.keywords.length > 0 || tlds.length > 0 || args.availableOnly || args.updateTld) {
+      return { valid: false, error: "--clear-cache cannot be used with other flags." };
+    }
+    return { valid: true };
+  }
   
   if (args.updateTld) {
     if (args.keywords.length > 0 || tlds.length > 0 || args.availableOnly) {
