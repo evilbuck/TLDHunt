@@ -52,6 +52,7 @@ describe("checkDomain", () => {
       keyword: "example",
       tld: ".notreal",
       available: true,
+      expiresAt: null,
     });
   });
 
@@ -69,6 +70,7 @@ Name Server: NS2.EXAMPLE.COM
       keyword: "example",
       tld: ".com",
       available: false,
+      expiresAt: null,
     });
   });
 
