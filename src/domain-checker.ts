@@ -19,6 +19,30 @@ export function isRegistered(whoisOutput: string): boolean {
   return false;
 }
 
+const EXPIRATION_PATTERNS = [
+  /expiry\s*(?:date)?[:\s]*(\d{4}[-/]\d{2}[-/]\d{2})/i,
+  /expiration\s*(?:date)?[:\s]*(\d{4}[-/]\d{2}[-/]\d{2})/i,
+  /expires?[:\s]*(\d{4}[-/]\d{2}[-/]\d{2})/i,
+  /expire[:\s]*(\d{4}[-/]\d{2}[-/]\d{2})/i,
+  /expiry\s*(?:date)?[:\s]*(\d{2}[-/]\d{2}[-/]\d{4})/i,
+  /expiration\s*(?:date)?[:\s]*(\d{2}[-/]\d{2}[-/]\d{4})/i,
+  /expires?[:\s]*(\d{2}[-/]\d{2}[-/]\d{4})/i,
+];
+
+export function parseExpiration(whoisOutput: string): number | null {
+  for (const pattern of EXPIRATION_PATTERNS) {
+    const match = whoisOutput.match(pattern);
+    if (match && match[1]) {
+      const dateStr = match[1];
+      const parsed = new Date(dateStr);
+      if (!isNaN(parsed.getTime())) {
+        return Math.floor(parsed.getTime() / 1000);
+      }
+    }
+  }
+  return null;
+}
+
 export function parseDomain(domain: string): { keyword: string; tld: string } {
   const lastDotIndex = domain.lastIndexOf(".");
   
@@ -45,10 +69,11 @@ export async function checkDomain(
   try {
     const output = await whoisExecutor(domain);
     const available = !isRegistered(output);
+    const expiresAt = available ? null : parseExpiration(output);
     
-    return { keyword, tld, available };
+    return { keyword, tld, available, expiresAt };
   } catch {
-    return { keyword, tld, available: true };
+    return { keyword, tld, available: true, expiresAt: null };
   }
 }
 

@@ -21,7 +21,8 @@ describe("cache", () => {
       CREATE TABLE IF NOT EXISTS cache (
         domain TEXT PRIMARY KEY,
         available INTEGER NOT NULL,
-        checked_at INTEGER NOT NULL
+        checked_at INTEGER NOT NULL,
+        expires_at INTEGER
       )
     `);
     db.run(`DELETE FROM cache`);
@@ -35,7 +36,7 @@ describe("cache", () => {
 
   describe("saveResult and getCachedResult", () => {
     test("saves and retrieves a result", () => {
-      saveResult("example.com", false, db);
+      saveResult("example.com", false, null, db);
       
       const result = getCachedResult("example.com", 3600000, db);
       
@@ -76,8 +77,8 @@ describe("cache", () => {
     });
 
     test("overwrites existing entry on save", () => {
-      saveResult("example.com", false, db);
-      saveResult("example.com", true, db);
+      saveResult("example.com", false, null, db);
+      saveResult("example.com", true, null, db);
       
       const result = getCachedResult("example.com", 3600000, db);
       
@@ -87,8 +88,8 @@ describe("cache", () => {
 
   describe("clearCache", () => {
     test("clears all cached entries", () => {
-      saveResult("example.com", false, db);
-      saveResult("example.org", true, db);
+      saveResult("example.com", false, null, db);
+      saveResult("example.org", true, null, db);
       
       const count = clearCache(db);
       

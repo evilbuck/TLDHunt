@@ -2,6 +2,7 @@ export interface DomainResult {
   keyword: string;
   tld: string;
   available: boolean;
+  expiresAt: number | null;
 }
 
 export interface JsonOutput {
@@ -29,6 +30,7 @@ export interface CachedResult {
   domain: string;
   available: boolean;
   checkedAt: number;
+  expiresAt: number | null;
 }
 
 export interface CacheOptions {

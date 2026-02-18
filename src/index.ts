@@ -122,10 +122,11 @@ export async function main(argv: string[]): Promise<number> {
               keyword,
               tld,
               available: cached.available,
+              expiresAt: cached.expiresAt,
             };
           } else {
             result = await checkDomain(domain);
-            saveResult(domain, result.available);
+            saveResult(domain, result.available, result.expiresAt);
           }
         } else {
           result = await checkDomain(domain);
