@@ -24,3 +24,14 @@ export interface UpdateResult {
   count: number;
   file: string;
 }
+
+export interface CachedResult {
+  domain: string;
+  available: boolean;
+  checkedAt: number;
+}
+
+export interface CacheOptions {
+  enabled: boolean;
+  ttlMs: number;
+}

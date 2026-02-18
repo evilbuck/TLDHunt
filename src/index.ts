@@ -4,6 +4,7 @@ import { parseArgs, validateArgs, DEFAULT_TLDS, type ParsedArgs } from "./cli";
 import { checkDomain } from "./domain-checker";
 import { updateTldList } from "./tld-updater";
 import { formatResultsTable, countResults } from "./table-formatter";
+import { initCache, getCachedResult, saveResult, clearCache, closeCache, hoursToMs } from "./cache";
 import type { DomainResult, JsonOutput } from "./types";
 
 const MAX_CONCURRENT = 30;
@@ -41,17 +42,11 @@ export async function runWithConcurrencyLimit<T>(
     
     if (executing.length >= limit) {
       await Promise.race(executing);
-      const completed = executing.filter(async p => {
-        try {
-          await p;
-          return true;
-        } catch {
-          return true;
+      for (let i = executing.length - 1; i >= 0; i--) {
+        const settled = await Promise.race([executing[i], Promise.resolve("pending")]);
+        if (settled !== "pending") {
+          executing.splice(i, 1);
         }
-      });
-      executing.length = 0;
-      for (const c of await Promise.all(completed)) {
-        if (c) executing.push(Promise.resolve());
       }
     }
   }
@@ -65,6 +60,14 @@ export async function main(argv: string[]): Promise<number> {
   
   if (!args.jsonOutput) {
     displayBanner();
+  }
+  
+  if (args.clearCache) {
+    initCache();
+    const count = clearCache();
+    closeCache();
+    console.log(`Cleared ${count} cached domain results.`);
+    return 0;
   }
   
   if (args.updateTld) {
@@ -92,20 +95,52 @@ export async function main(argv: string[]): Promise<number> {
     tlds = DEFAULT_TLDS;
   }
   
+  const cacheEnabled = !args.noCache;
+  const ttlMs = hoursToMs(args.cacheTtl);
+  
+  if (cacheEnabled) {
+    initCache();
+  }
+  
   if (!args.jsonOutput) {
     console.log(`Checking ${args.keywords.length} keyword(s) against ${tlds.length} TLD(s)...\n`);
   }
   
-  const tasks: (() => Promise<DomainResult>)[] = [];
+  const results: DomainResult[] = [];
+  const tasks: (() => Promise<void>)[] = [];
   
   for (const keyword of args.keywords) {
     for (const tld of tlds) {
       const domain = `${keyword}${tld}`;
-      tasks.push(() => checkDomain(domain));
+      tasks.push(async () => {
+        let result: DomainResult;
+        
+        if (cacheEnabled) {
+          const cached = getCachedResult(domain, ttlMs);
+          if (cached) {
+            result = {
+              keyword,
+              tld,
+              available: cached.available,
+            };
+          } else {
+            result = await checkDomain(domain);
+            saveResult(domain, result.available);
+          }
+        } else {
+          result = await checkDomain(domain);
+        }
+        
+        results.push(result);
+      });
     }
   }
   
-  const results = await runWithConcurrencyLimit(tasks, MAX_CONCURRENT);
+  await runWithConcurrencyLimit(tasks, MAX_CONCURRENT);
+  
+  if (cacheEnabled) {
+    closeCache();
+  }
   
   if (args.jsonOutput) {
     let jsonResults: JsonOutput[] = results.map(r => ({
@@ -137,10 +172,12 @@ export async function main(argv: string[]): Promise<number> {
 }
 
 function usage(): void {
-  console.log(`Usage: tldhunt <keyword> [-e <tld> | -E <tld-file>] [-x] [-j] [--update-tld]
+  console.log(`Usage: tldhunt <keyword> [-e <tld> | -E <tld-file>] [-x] [-j] [--no-cache] [--cache-ttl <hours>] [--clear-cache] [--update-tld]
 Example: tldhunt linuxsec
        : tldhunt linuxsec -e .com
        : tldhunt linuxsec -j
+       : tldhunt linuxsec --no-cache
+       : tldhunt --clear-cache
        : tldhunt --update-tld`);
 }
 

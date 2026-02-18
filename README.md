@@ -126,7 +126,43 @@ Summary: 2 available, 4 taken
 | `-E, --tld-file <file>` | File containing TLDs to check |
 | `-x, --available-only` | Show only available domains |
 | `-j, --json` | Output results as compact JSON |
+| `--no-cache` | Skip cache, perform fresh WHOIS lookups |
+| `--cache-ttl <hours>` | Cache timeout in hours (default: 1440 = 60 days) |
+| `--clear-cache` | Clear all cached results and exit |
 | `--update-tld` | Update TLD list from IANA |
+
+# Caching
+
+TLDHunt caches domain availability results in `~/.tldhunt/cache.db` to avoid repeated WHOIS queries. This provides ~10x speedup for re-checking domains.
+
+**Cache behavior:**
+- Default TTL: 60 days (configurable via `--cache-ttl`)
+- Cached results are automatically used for subsequent queries
+- Use `--no-cache` to bypass cache and perform fresh lookups
+- Use `--clear-cache` to delete all cached results
+
+### Check domains with caching (default)
+```bash
+bun run check linuxsec -e .com
+# First run: ~100-200ms (WHOIS query)
+# Second run: ~14ms (cached)
+```
+
+### Skip cache for fresh results
+```bash
+bun run check linuxsec -e .com --no-cache
+```
+
+### Set custom cache TTL
+```bash
+# Cache for 24 hours only
+bun run check linuxsec -e .com --cache-ttl 24
+```
+
+### Clear cache
+```bash
+bun run check --clear-cache
+```
 
 # Development
 

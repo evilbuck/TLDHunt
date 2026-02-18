@@ -32,10 +32,12 @@ description: Core project information and conventions
 | `src/index.ts` | Entry point, workflow orchestration |
 | `src/cli.ts` | Argument parsing |
 | `src/domain-checker.ts` | WHOIS query logic |
+| `src/cache.ts` | SQLite caching for domain results |
 | `src/tld-updater.ts` | IANA TLD fetching |
 | `src/table-formatter.ts` | Output formatting |
 | `test/*.test.ts` | Unit tests |
 | `tlds.txt` | Default TLD list |
+| `~/.tldhunt/cache.db` | Domain result cache database |
 | `tldhunt.sh` | Legacy Bash implementation (preserved) |
 
 ## External Dependencies
